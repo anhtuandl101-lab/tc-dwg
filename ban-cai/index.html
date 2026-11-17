@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#16191d">
+<title>TC DWG</title>
+<link rel="icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #16191d; --panel: #20252b; --panel2: #2a3038; --line: #39414b;
+    --text: #e9edf1; --muted: #9aa5b1; --accent: #3d9bff; --accent2: #1f6fd1; --danger: #ff5d5d;
+    --safe-top: env(safe-area-inset-top, 0px); --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, Roboto, "Segoe UI", sans-serif; overflow: hidden; user-select: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  [hidden] { display: none !important; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---- trang chủ ---- */
+  #home { position: fixed; inset: 0; display: flex; flex-direction: column; padding: calc(18px + var(--safe-top)) 16px calc(16px + var(--safe-bot)); overflow-y: auto; }
+  #home h1 { font-size: 22px; margin: 6px 0 2px; letter-spacing: .3px; }
+  #home .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .btn-big { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--accent2); border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 600; }
+  .btn-big:active { background: var(--accent); }
+  #home h2 { font-size: 13px; text-transform: uppercase; color: var(--muted); letter-spacing: .6px; margin: 24px 0 8px; font-weight: 600; }
+  .recent { display: flex; flex-direction: column; gap: 8px; }
+  .rc { display: flex; align-items: center; gap: 12px; background: var(--panel); border-radius: 12px; padding: 12px; text-align: left; width: 100%; }
+  .rc:active { background: var(--panel2); }
+  .rc .ico { width: 40px; height: 40px; border-radius: 10px; background: #263445; color: #7cb8ff; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none; }
+  .rc .nm { font-weight: 600; word-break: break-all; }
+  .rc .mt { color: var(--muted); font-size: 12px; }
+  .rc .x { margin-left: auto; color: var(--muted); padding: 6px; flex: none; }
+  .empty { color: var(--muted); font-size: 14px; padding: 14px; background: var(--panel); border-radius: 12px; }
+  .note { color: var(--muted); font-size: 12px; margin-top: auto; padding-top: 20px; }
+
+  /* ---- màn xem ---- */
+  #viewer { position: fixed; inset: 0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 4px; padding: calc(6px + var(--safe-top)) 6px 6px; background: linear-gradient(#16191df0, #16191dc0); pointer-events: none; }
+  .topbar > * { pointer-events: auto; }
+  .ib { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; flex: none; }
+  .ib:active, .ib.on { background: #ffffff1c; }
+  .ib.on { color: var(--accent); }
+  #fname { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
+  /* thanh công cụ nằm ngang dưới cùng */
+  :root { --tool-h: 60px; --tabs-h: 46px; }
+  .rail { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--tool-h) + var(--safe-bot)); display: flex; padding: 0 4px var(--safe-bot); background: #16191df5; border-top: 1px solid var(--line); }
+  .rail .ib { flex: 1; width: auto; height: var(--tool-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 12px; font-size: 11px; color: var(--muted); }
+  .rail .ib svg { color: var(--text); }
+  .rail .ib.on { background: #3d9bff22; color: var(--accent); }
+  .rail .ib.on svg { color: var(--accent); }
+  #tabs { position: absolute; left: 0; right: 0; bottom: calc(var(--tool-h) + var(--safe-bot)); height: var(--tabs-h); display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 0 8px; background: #16191de6; scrollbar-width: none; }
+  #tabs button { flex: none; padding: 7px 14px; border-radius: 999px; background: var(--panel); font-size: 13px; }
+  #tabs button.on { background: var(--accent2); }
+  #coord { position: absolute; left: 10px; bottom: calc(var(--tool-h) + 8px + var(--safe-bot)); font-size: 11px; color: var(--muted); background: #16191dc0; padding: 2px 6px; border-radius: 6px; pointer-events: none; }
+  body.has-tabs #coord { bottom: calc(var(--tool-h) + var(--tabs-h) + 8px + var(--safe-bot)); }
+
+  /* bảng đo, ghi chú: nổi ngay trên thanh công cụ */
+  .bar { position: absolute; left: 8px; right: 8px; bottom: calc(var(--tool-h) + 8px + var(--safe-bot)); background: #20252bf2; border-radius: 16px; padding: 8px; box-shadow: 0 4px 18px #0008; display: flex; flex-direction: column; gap: 8px; }
+  body.has-tabs .bar { bottom: calc(var(--tool-h) + var(--tabs-h) + 8px + var(--safe-bot)); }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chip { padding: 8px 12px; border-radius: 10px; background: var(--panel2); font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+  .chip.on { background: var(--accent2); }
+  .chip:active { filter: brightness(1.2); }
+  .chip.ok { margin-left: auto; background: #2f7d4f; }
+  .res { font-size: 15px; font-weight: 600; padding: 2px 4px; min-height: 22px; }
+  .res small { color: var(--muted); font-weight: 400; font-size: 12px; display: block; }
+  .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff3; }
+  .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+
+  /* tấm trượt (layer, xuất, cài đặt) */
+  .sheet-bg { position: fixed; inset: 0; background: #0008; z-index: 20; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 82vh; background: var(--panel); border-radius: 18px 18px 0 0; z-index: 21; display: flex; flex-direction: column; padding-bottom: var(--safe-bot); }
+  .sheet .hd { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 16px; border-bottom: 1px solid var(--line); }
+  .sheet .hd b { flex: 1; font-size: 16px; }
+  .sheet .bd { overflow-y: auto; padding: 8px 12px 14px; }
+  .lyr { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-bottom: 1px solid #ffffff0d; }
+  .lyr .sq { width: 16px; height: 16px; border-radius: 4px; flex: none; border: 1px solid #fff4; }
+  .lyr .nm { flex: 1; min-width: 0; word-break: break-all; font-size: 14px; }
+  .lyr .ct { color: var(--muted); font-size: 12px; }
+  .tg { width: 46px; height: 28px; border-radius: 14px; background: #48515c; position: relative; flex: none; transition: background .15s; }
+  .tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .tg.on { background: var(--accent2); }
+  .tg.on::after { left: 21px; }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid #ffffff0d; }
+  .opt .nm { flex: 1; }
+  .opt .nm small { display: block; color: var(--muted); font-size: 12px; }
+  .seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; }
+  .seg button { padding: 6px 10px; border-radius: 8px; font-size: 13px; }
+  .seg button.on { background: var(--accent2); }
+  .act { display: flex; align-items: center; gap: 14px; padding: 14px 8px; border-radius: 12px; width: 100%; text-align: left; }
+  .act:active { background: var(--panel2); }
+  .act .nm small { display: block; color: var(--muted); font-size: 12px; }
+
+  /* chờ, thông báo, hộp nhập */
+  #busy { position: fixed; inset: 0; background: #000a; z-index: 40; display: grid; place-items: center; }
+  #busyHuy { margin-left: 6px; background: transparent; color: var(--fg, #fff); border: 1px solid #fff6; border-radius: 10px; padding: 6px 12px; font: inherit; }
+  #busy .box { background: var(--panel); padding: 22px 26px; border-radius: 16px; display: flex; align-items: center; gap: 14px; max-width: 86vw; }
+  .spin { width: 26px; height: 26px; border: 3px solid #fff3; border-top-color: var(--accent); border-radius: 50%; animation: sp 0.8s linear infinite; flex: none; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(130px + var(--safe-bot)); background: #2d343c; padding: 10px 16px; border-radius: 12px; z-index: 50; max-width: 90vw; box-shadow: 0 4px 16px #0008; font-size: 14px; text-align: center; }
+  #ask { position: fixed; inset: 0; background: #0009; z-index: 45; display: grid; place-items: center; padding: 16px; }
+  #ask .box { background: var(--panel); border-radius: 16px; padding: 16px; width: 100%; max-width: 420px; }
+  #ask textarea { width: 100%; min-height: 80px; margin: 10px 0; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; user-select: text; }
+  #ask .row { justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- Trang chủ -->
+<section id="home">
+  <h1 style="display:flex;align-items:center;gap:10px"><img src="icon-192.png" alt="" width="40" height="40" style="border-radius:10px">TC DWG</h1>
+  <div class="sub">Xem bản vẽ AutoCAD (DWG, DXF) ngay trên điện thoại, không cần mạng</div>
+  <button class="btn-big" id="btnOpen">
+    <svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/></svg>
+    Mở bản vẽ DWG / DXF
+  </button>
+  <input type="file" id="file" accept=".dwg,.DWG,.dxf,.DXF,application/acad,image/vnd.dwg,image/vnd.dxf,application/dxf,application/octet-stream" hidden>
+  <h2>Mở gần đây</h2>
+  <div class="recent" id="recent"></div>
+  <div class="note">Đọc DWG bằng thư viện mã nguồn mở LibreDWG (bản AutoCAD R13 đến 2018 trở lên), đọc DXF dạng văn bản (R12 đến 2018). Bản vẽ chỉ xử lý trên máy, không gửi đi đâu.<br><a href="#" id="btnGioiThieu" style="color:var(--accent)">Giới thiệu, giấy phép và mã nguồn</a></div>
+</section>
+
+<!-- Màn xem bản vẽ -->
+<section id="viewer" hidden>
+  <canvas id="cv"></canvas>
+  <div class="topbar">
+    <button class="ib" id="btnBack" title="Quay lại"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div id="fname"></div>
+    <button class="ib" id="btnMenu" title="Tùy chọn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="19" r="1.3"/></svg></button>
+  </div>
+  <div class="rail">
+    <button class="ib" id="btnFit" title="Xem toàn bộ"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Toàn bộ</span></button>
+    <button class="ib" id="btnLayer" title="Layer"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><span>Layer</span></button>
+    <button class="ib" id="btnDo" title="Đo"><svg class="i" viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg><span>Đo</span></button>
+    <button class="ib" id="btnGhi" title="Ghi chú"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg><span>Ghi chú</span></button>
+    <button class="ib" id="btnXuat" title="Xuất ảnh / PDF"><svg class="i" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Xuất</span></button>
+  </div>
+  <div id="coord"></div>
+  <div id="tabs" hidden></div>
+
+  <!-- thanh đo -->
+  <div class="bar" id="barDo" hidden>
+    <div class="row">
+      <button class="chip on" data-do="dai">Chiều dài</button>
+      <button class="chip" data-do="dt">Diện tích</button>
+      <button class="chip" id="doSnap">Bắt điểm: bật</button>
+    </div>
+    <div class="res" id="doRes">Chạm vào bản vẽ để chọn điểm</div>
+    <div class="row">
+      <button class="chip" id="doUndo">↶ Bỏ điểm</button>
+      <button class="chip" id="doClear">Xóa</button>
+      <button class="chip ok" id="doDone">Xong</button>
+    </div>
+  </div>
+
+  <!-- thanh ghi chú -->
+  <div class="bar" id="barGhi" hidden>
+    <div class="row">
+      <button class="chip on" data-ghi="pen">✎ Bút</button>
+      <button class="chip" data-ghi="rect">▭ Khung</button>
+      <button class="chip" data-ghi="arrow">↗ Mũi tên</button>
+      <button class="chip" data-ghi="text">T Chữ</button>
+    </div>
+    <div class="row" id="ghiMau"></div>
+    <div class="row">
+      <button class="chip" id="ghiUndo">↶ Hoàn tác</button>
+      <button class="chip" id="ghiClear">Xóa hết</button>
+      <button class="chip ok" id="ghiDone">Xong</button>
+    </div>
+    <div class="res"><small>Một ngón để vẽ, hai ngón để kéo và phóng to. Ghi chú tự lưu theo file.</small></div>
+  </div>
+</section>
+
+<!-- tấm trượt dùng chung -->
+<div class="sheet-bg" id="sheetBg" hidden></div>
+<div class="sheet" id="sheet" hidden>
+  <div class="hd"><b id="sheetTitle"></b><span id="sheetTools"></span>
+    <button class="ib" id="sheetClose"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="bd" id="sheetBody"></div>
+</div>
+
+<div id="busy" hidden><div class="box"><div class="spin"></div><div id="busyText">Đang mở...</div><button id="busyHuy" hidden>Hủy</button></div></div>
+<div id="toast" hidden></div>
+<div id="ask" hidden><div class="box"><b id="askTitle"></b><textarea id="askText"></textarea>
+  <div class="row"><button class="chip" id="askNo">Hủy</button><button class="chip on" id="askYes">Đồng ý</button></div></div></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

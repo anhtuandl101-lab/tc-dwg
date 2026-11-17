@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TC DWG</string>
+    <string name="title_activity_main">TC DWG</string>
+    <string name="package_name">vn.cso.tcdwg</string>
+    <string name="custom_url_scheme">vn.cso.tcdwg</string>
+</resources>

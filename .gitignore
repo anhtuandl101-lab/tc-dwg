@@ -1,0 +1,11 @@
+node_modules/
+android-app/www/
+android-app/khoa-ky/
+android-app/android/build/
+android-app/android/app/build/
+android-app/android/.gradle/
+*.apk
+*.aab
+*.jks
+local.properties
+keystore.properties

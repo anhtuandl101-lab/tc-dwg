@@ -1,0 +1,203 @@
+diff --git a/bindings/javascript/embind/binding_dynapi.cpp b/bindings/javascript/embind/binding_dynapi.cpp
+index 8770af1..7c463c7 100644
+--- a/bindings/javascript/embind/binding_dynapi.cpp
++++ b/bindings/javascript/embind/binding_dynapi.cpp
+@@ -78,6 +78,8 @@ bool is_dwg_object_wrapper(const std::string& name) {
+   return is_dwg_object(name.c_str());
+ }
+ 
++extern int tc_tu_hien_tai;
++
+ template <typename T>
+ emscripten::val get_obj_value(const Dwg_Data *dwg, T _obj, const Dwg_DYNAPI_field *f) {
+   emscripten::val result = emscripten::val::object();
+@@ -86,7 +88,9 @@ emscripten::val get_obj_value(const Dwg_Data *dwg, T _obj, const Dwg_DYNAPI_fiel
+     // UTF8 String
+     // Subclass reads (e.g. MLEADER_Content_MText.default_text) pass dwg=NULL.
+     // BITCODE_T ("T") fields are UTF-16 in DWG; without dwg we must still decode as TU.
+-    const bool is_tu = dwg ? IS_FROM_TU_DWG (dwg) : strEQc (f->type, "T");
++    // [TC DWG] file R2004 trở về trước: chuỗi subclass là TV (8 bit), không phải TU — đọc nhầm sẽ ra chữ Hán
++    const bool is_tu = dwg ? IS_FROM_TU_DWG (dwg)
++                           : (tc_tu_hien_tai == 0 ? false : strEQc (f->type, "T"));
+     if (is_tu && strNE (f->type, "TF")) { /* not TF */
+         BITCODE_TU wstr = *(BITCODE_TU*)((char*)_obj + f->offset);
+         if (!wstr) {
+@@ -184,10 +188,9 @@ emscripten::val dwg_dynapi_header_value_wrapper(
+     const Dwg_Header_Variables *const _obj = &dwg->header_vars;
+     return get_obj_value(dwg, _obj, f);
+   } else {
+-    std::ostringstream ss;
+-    ss << "Invalid header field '" << fieldname << "'!";
++    std::string ss_str = std::string() + "Invalid header field '" + std::string(fieldname) + "'!";
+     result.set("success", false); 
+-    result.set("message", ss.str());
++    result.set("message", ss_str);
+     return result;
+   }
+ }
+@@ -222,11 +225,10 @@ emscripten::val dwg_dynapi_entity_value_wrapper(
+ 
+   const Dwg_DYNAPI_field *f = dwg_dynapi_entity_field(obj->name, fieldname.c_str());
+   if (!f) {
+-    std::ostringstream ss;
+-    ss << "Invalid object name '" << obj->name << "' or field name '" << fieldname << "'!";
++    std::string ss_str = std::string() + "Invalid object name '" + std::string(obj->name ? obj->name : "") + "' or field name '" + std::string(fieldname) + "'!";
+     emscripten::val result = emscripten::val::object();
+     result.set("success", false); 
+-    result.set("message", ss.str());
++    result.set("message", ss_str);
+     return result;
+   }
+ 
+@@ -268,20 +270,18 @@ emscripten::val dwg_dynapi_common_value_wrapper(
+     f = dwg_dynapi_common_object_field(fieldname.c_str());
+     _obj = obj->tio.object;
+   } else {
+-    std::ostringstream ss;
+-    ss << "Unhandled " << obj->name << ".supertype!";
++    std::string ss_str = std::string() + "Unhandled " + std::string(obj->name ? obj->name : "") + ".supertype!";
+     emscripten::val result = emscripten::val::object();
+     result.set("success", false); 
+-    result.set("message", ss.str());
++    result.set("message", ss_str);
+     return result;
+   }
+ 
+   if (!f) {
+-    std::ostringstream ss;
+-    ss << "Invalid object name '" << obj->name << "' or field name '" << fieldname << "'!";
++    std::string ss_str = std::string() + "Invalid object name '" + std::string(obj->name ? obj->name : "") + "' or field name '" + std::string(fieldname) + "'!";
+     emscripten::val result = emscripten::val::object();
+     result.set("success", false); 
+-    result.set("message", ss.str());
++    result.set("message", ss_str);
+     return result;
+   }
+ 
+@@ -320,11 +320,10 @@ emscripten::val dwg_dynapi_subclass_value_wrapper(
+     if (memBEGINc(subclass_ptr, "Dwg_Object_"))
+     f = (Dwg_DYNAPI_field *)dwg_dynapi_entity_field(&subclass_ptr[strlen("Dwg_Object_")], fieldname_ptr);
+     if (!f) {
+-      std::ostringstream ss;
+-      ss << "Invalid subclass name '" << subclass << "' or field name '" << fieldname << "'!";
++      std::string ss_str = std::string() + "Invalid subclass name '" + std::string(subclass) + "' or field name '" + std::string(fieldname) + "'!";
+       emscripten::val result = emscripten::val::object();
+       result.set("success", false); 
+-      result.set("message", ss.str());
++      result.set("message", ss_str);
+       return result;
+     }
+   }
+diff --git a/bindings/javascript/embind/binding_func.cpp b/bindings/javascript/embind/binding_func.cpp
+index ca06379..551e79f 100644
+--- a/bindings/javascript/embind/binding_func.cpp
++++ b/bindings/javascript/embind/binding_func.cpp
+@@ -26,9 +26,13 @@ extern "C" {
+ 
+ using namespace emscripten;
+ 
++int tc_tu_hien_tai = -1;
++
+ emscripten::val dwg_read_file_wrapper(const std::string& filename) {
+   Dwg_Data* dwg = new Dwg_Data();
+   int error = dwg_read_file(filename.c_str(), dwg);
++  // [TC DWG] nhớ bản vẽ vừa đọc có dùng chuỗi UTF-16 (R2007+) hay không, cho các lần đọc trường subclass (không có dwg)
++  tc_tu_hien_tai = IS_FROM_TU_DWG (dwg) ? 1 : 0;
+   for (BITCODE_BL i = 0; i < dwg->num_object_refs; i++)
+     {
+       // scan num_objects for the id (absolute_ref)
+diff --git a/src/decode.c b/src/decode.c
+index a7e4224..d00c529 100644
+--- a/src/decode.c
++++ b/src/decode.c
+@@ -2093,7 +2093,20 @@ read_2004_compressed_section (Bit_Chain *dat, Dwg_Data *restrict dwg,
+       }
+     max_decomp_size = (uint32_t)max_decomp_size64;
+   }
+-  if (info->size > (int64_t)info->num_sections * (int64_t)info->max_decomp_size
++  /* [TC DWG] AutoCAD có thể để trống một trang logic giữa phần (địa chỉ trang nhảy
++     cách 1 trang, vd file 48 MB: 2245 trang nhưng size vượt 2245*0x7400 ~18 KB).
++     Mỗi trang được giải nén vào đúng địa chỉ logic của nó (es.fields.address), nên
++     chỉ cần vùng đệm đủ tới cuối size, làm tròn lên bội số trang. Vẫn giữ trần 790 MB. */
++  if (info->size > (int64_t)max_decomp_size && info->max_decomp_size
++      && info->size <= 0x2f000000)
++    {
++      uint64_t can = ((uint64_t)info->size + info->max_decomp_size - 1)
++                     / info->max_decomp_size * info->max_decomp_size;
++      LOG_WARN ("Section %s size %" PRId64 " > %u pages: grow buffer to %" PRIu64,
++                info->name, info->size, info->num_sections, can);
++      max_decomp_size = (uint32_t)can;
++    }
++  if (info->size > (int64_t)max_decomp_size
+       || info->size < 0)
+     {
+       LOG_ERROR ("Invalid section %s size %" PRId64 " > %u * " FORMAT_RL,
+@@ -4506,7 +4519,14 @@ dwg_decode_entity (Bit_Chain *dat, Bit_Chain *hdl_dat, Bit_Chain *str_dat,
+   if (has_wrong_bitsize)
+     LOG_WARN ("Skip eed");
+   else
+-    error |= dwg_decode_eed (dat, (Dwg_Object_Object *)ent);
++    {
++      error |= dwg_decode_eed (dat, (Dwg_Object_Object *)ent);
++      /* [TC DWG] app xem bản vẽ không dùng EED/XDATA của đối tượng hình vẽ:
++         đọc qua cho đúng vị trí bit rồi giải phóng ngay (file nặng có hàng triệu
++         mục EED, giữ lại tốn ~25% bộ nhớ WASM). */
++      if (tc_bo_eed && ent->num_eed)
++        dwg_free_eed (obj);
++    }
+   LOG_INSANE (" @%" PRIuSIZE ".%u\n", dat->byte, dat->bit);
+   // LOG_TRACE ("\n");
+   if (error & (DWG_ERR_INVALIDEED | DWG_ERR_VALUEOUTOFBOUNDS))
+@@ -4711,6 +4731,26 @@ dwg_new_ref (Dwg_Data *restrict dwg)
+   return ref;
+ }
+ 
++/* [TC DWG] thu gọn bảng dwg->object về đúng số đối tượng (bảng tăng gấp đôi khi đọc,
++   file 1,4 triệu đối tượng dư ~80 MB). dlmalloc thu nhỏ tại chỗ; nếu bị dời chỗ thì
++   cập nhật lại con trỏ ref->obj. */
++int tc_bo_eed = 1;
++void
++tc_thu_gon_object (Dwg_Data *restrict dwg)
++{
++  Dwg_Object *old = dwg->object, *moi;
++  if (!old || !dwg->num_objects || dwg->num_alloced_objects <= dwg->num_objects + 1024)
++    return;
++  moi = (Dwg_Object *)realloc (old, (dwg->num_objects + 1024) * sizeof (Dwg_Object));
++  if (!moi)
++    return;
++  dwg->object = moi;
++  dwg->num_alloced_objects = dwg->num_objects + 1024;
++  memset (&dwg->object[dwg->num_objects], 0, 1024 * sizeof (Dwg_Object));
++  if (moi != old)
++    dwg_resolve_objectrefs_silent (dwg);
++}
++
+ /* Store an object reference in a separate dwg->object_ref array
+    which is the id for handles, i.e. DXF 5, 330. */
+ Dwg_Object_Ref *
+diff --git a/src/decode.h b/src/decode.h
+index 541eb05..16dc6c0 100644
+--- a/src/decode.h
++++ b/src/decode.h
+@@ -110,6 +110,9 @@ int decompress_R2004_section (Bit_Chain *restrict src,
+ void decrypt_R2004_header (BITCODE_RC *restrict dest,
+                            const BITCODE_RC *restrict src, size_t size);
+ void dwg_resolve_objectrefs_silent (Dwg_Data *restrict dwg);
++/* [TC DWG] */
++extern int tc_bo_eed;
++void tc_thu_gon_object (Dwg_Data *restrict dwg);
+ uint32_t dwg_section_page_checksum (const uint32_t seed,
+                                     Bit_Chain *restrict dat, int32_t size,
+                                     bool skip_checksum);
+diff --git a/src/dwg.c b/src/dwg.c
+index b7e2eb9..9b37329 100644
+--- a/src/dwg.c
++++ b/src/dwg.c
+@@ -323,6 +323,7 @@ dwg_read_file (const char *restrict filename, Dwg_Data *restrict dwg)
+   free (bit_chain.chain);
+   bit_chain.chain = NULL;
+   bit_chain.size = 0;
++  tc_thu_gon_object (dwg); /* [TC DWG] trả phần bảng đối tượng cấp dư */
+ 
+   dwg_fixup_viewport_ids (dwg);
+   return error;

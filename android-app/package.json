@@ -1,0 +1,20 @@
+{
+  "name": "tc-dwg",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App xem ban ve DWG cho Android, dong goi bang Capacitor tu ban web o ../ban-cai",
+  "scripts": {
+    "copy-web": "node copy-web.js",
+    "sync": "node copy-web.js && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.6.10",
+    "@capacitor/app": "7.1.2",
+    "@capacitor/core": "7.6.10",
+    "@capacitor/filesystem": "7.1.9",
+    "@capacitor/share": "7.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.10"
+  }
+}

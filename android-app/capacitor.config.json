@@ -1,0 +1,9 @@
+{
+  "appId": "vn.cso.tcdwg",
+  "appName": "TC DWG",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "auto"
+  }
+}
